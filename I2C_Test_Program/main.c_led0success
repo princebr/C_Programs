@@ -1,0 +1,87 @@
+// main.c
+//
+// Test program for bcm2835 library
+// 
+// After installing bcm2835, you can build this
+// with something like:
+// gcc -o blink blink.c -l bcm2835
+// sudo ./blink
+//
+// Or you gan test it before installing with:
+// gcc -o blink -I ../../serc ../../src/bcm2835.c blink.c
+// sudo ./blink
+//
+
+#include <bcm2835.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+#define MODE_READ 0
+#define MODE_WRITE 1
+#define MAX_LEN 32
+
+#define MODE1 0x00
+#define MODE2 0x01
+#define LED0_ON_L 0x06
+#define LED0_ON_H 0x07
+#define LED0_OFF_L 0x08
+#define LED0_OFF_H 0x09
+#define ALL_LED_ON 0xFA
+#define ALL_LED_OFF 0xFC
+#define PRE_SCALE 0xFE
+
+char wbuf[MAX_LEN];
+char rbuf[MAX_LEN];
+
+
+char mode_msg[] = {MODE1, 0x80};//01};		// MODE1 => 0x01, reset chip
+char autoinc_msg[] = {MODE1, 0xA1}; 	// MODE1 => 0xA1, auto-increment
+char cfg_msg[] = {MODE2, 0x04}; 		// MODE2 => 0x04, hardware configuration
+char led0_on[] = {LED0_ON_L, 0x00, 0x00, 0x33, 0x02};
+char all_on[] = {ALL_LED_ON, 0xBB};
+char all_off[] = {ALL_LED_OFF, 0x00};
+
+
+uint8_t slave_address = 0x42;
+uint8_t data;
+
+int main(int argc, char **argv)
+{
+
+	if (!bcm2835_init())
+		return 1;
+
+	
+	bcm2835_i2c_setSlaveAddress(slave_address);
+	bcm2835_i2c_begin();
+		
+	//while (1)
+	//{
+		
+		//data = bcm2835_i2c_write(mode_msg, 2);
+		printf("Write Result (Mode) = %d\n", data); 
+		delay(1);
+		data = bcm2835_i2c_write(autoinc_msg, 2);
+		printf("Write Result (Autoinc) = %d\n", data); 
+		delay(1);
+		data = bcm2835_i2c_write(cfg_msg, 2);
+		printf("Write Result (Config) = %d\n", data); 
+		delay(1);
+		data = bcm2835_i2c_write(led0_on, 5);
+		printf("Write Result (All On) = %d\n", data);
+		
+		
+		delay(200);
+		
+		data = bcm2835_i2c_read(rbuf, MAX_LEN);
+		//printf("Read Result = %d\n", rbuf);
+	//}
+	
+	bcm2835_i2c_end(); 
+
+
+	bcm2835_close();	
+	return 0;
+}
+
