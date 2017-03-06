@@ -37,11 +37,14 @@ uint8_t init_bcm(void)
 	else
 	{
 		// Set CapTouch I/O to inputs
-		bcm2835_gpio_fsel(SW1, BCM2835_GPIO_FSEL_INPT);
-		bcm2835_gpio_fsel(SW2, BCM2835_GPIO_FSEL_INPT);
-		bcm2835_gpio_fsel(SW3, BCM2835_GPIO_FSEL_INPT);
-		bcm2835_gpio_fsel(SW4, BCM2835_GPIO_FSEL_INPT);
-		bcm2835_gpio_fsel(SW5, BCM2835_GPIO_FSEL_INPT);
+		bcm2835_gpio_fsel(CAP_ATTD, BCM2835_GPIO_FSEL_INPT);
+		bcm2835_gpio_fsel(CAP_DND, BCM2835_GPIO_FSEL_INPT);
+		bcm2835_gpio_fsel(CAP_RL, BCM2835_GPIO_FSEL_INPT);
+		bcm2835_gpio_fsel(CAP_LF, BCM2835_GPIO_FSEL_INPT);
+		bcm2835_gpio_fsel(CAP_TTL, BCM2835_GPIO_FSEL_INPT);
+			
+		// Set RL CapTouch I/O to input
+		bcm2835_gpio_fsel(CAP_RL_BTN, BCM2835_GPIO_FSEL_INPT);
 		
 		// Set uSW I/O to inputs
 		bcm2835_gpio_fsel(NEU_USW, BCM2835_GPIO_FSEL_INPT);
@@ -52,6 +55,12 @@ uint8_t init_bcm(void)
 		bcm2835_gpio_ren(LAY_USW);
 		bcm2835_gpio_set_eds(NEU_USW);
 		bcm2835_gpio_set_eds(LAY_USW);
+		
+		// Clear EDS registers for RL inputs
+		bcm2835_gpio_ren(CAP_RL);		// Rising edge detect
+		bcm2835_gpio_ren(CAP_RL_BTN);	// Rising edge detect
+		bcm2835_gpio_set_eds(CAP_RL);
+		bcm2835_gpio_set_eds(CAP_RL_BTN);
 		
 		
 		// Set Relay I/O to outputs
@@ -102,71 +111,90 @@ void init_periph(void)
 
 void set_initial_conditions(void)
 {
-	//Turn on Status LED
+	// Turn on Status LED
 	set_led(ST_LED);
 
 	// Mute Audio Amplifier
 	mute_audio();
-	
-	//***********************************/
-	// Reading Light Hack - use .state 
-	readingLight1.pwmRaw = RL_DEFAULT_MAX;
-	readingLight.intensity = RL_DEFAULT_MAX;
-	readingLight.state = RL1;
-	//***********************************/
-	
+
 	// Set Reading Light 1
-	readingLight1.state = OFF;
-	readingLight1.pwmRaw = RL_DEFAULT_MAX;
 	readingLight1.address = CH7_BASE;
 	readingLight1.device = PCA1;
 
 	// Set Reading Light 2
-	readingLight2.state = OFF;
-	readingLight2.pwmRaw = RL_DEFAULT_MAX;
 	readingLight2.address = CH8_BASE;
 	readingLight2.device = PCA1;
+	
+	// Default Reading Light Intensity
+	readingLight.intensity = RL_DEFAULT_MAX;
+		
+	// Set Reading Light state and turn on 
+	if (bcm2835_gpio_lev(NEU_USW))
+	{
+		readingLight.mode = RL2;
+		readingLight1.pwmRaw = 0;
+		readingLight2.pwmRaw = readingLight.intensity;
+	}
+	else
+	{
+		readingLight.mode = RL1;
+		readingLight1.pwmRaw = readingLight.intensity;
+		readingLight2.pwmRaw = 0;
+	}
+		
+	// Trigger to turn on reading light by default
+	readingLight.next_state = 1;
+	readingLight.prev_state = 0;
+	
+	// Clear CAP_RL_BTN states
+	cap_rl_btn.next_state = 0;
+	cap_rl_btn.prev_state = 0;
+		
+	printf("RL State: %d\n", readingLight.mode);
+	//***********************************/
+	
+
 
 	// Set Cap TTL Light
 	capTTLLight.state = OFF;
 	capTTLLight.pwmRaw = CAP_LIGHT_DEFAULT;
-	capTTLLight.address = CH6_BASE;
+	capTTLLight.address = CAP_TTL_BASE;
 	capTTLLight.device = PCA1;
 
 	// Set Cap LAY Light
 	capLAYLight.state = OFF;
 	capLAYLight.pwmRaw = CAP_LIGHT_DEFAULT;
-	capLAYLight.address = CH5_BASE;
+	capLAYLight.address = CAP_LAY_BASE;
 	capLAYLight.device = PCA1;
 	
 	// Set Cap RL Light
 	capRLLight.state = OFF;
 	capRLLight.pwmRaw = CAP_LIGHT_DEFAULT;
-	capRLLight.address = CH4_BASE;
+	capRLLight.address = CAP_RL_BASE;
 	capRLLight.device = PCA1;
 
 	// Set Cap DND White
 	capDNDWhiteLight.state = OFF;
 	capDNDWhiteLight.pwmRaw = CAP_LIGHT_DEFAULT;
-	capDNDWhiteLight.address = CH2_BASE;
+	capDNDWhiteLight.address = CAP_DND_WHITE_BASE;
 	capDNDWhiteLight.device = PCA1;
 
 	// Set Cap DND Red
 	capDNDRedLight.state = OFF;
 	capDNDRedLight.pwmRaw = 0;
-	capDNDRedLight.address = CH3_BASE;
+	capDNDRedLight.address = CAP_DND_RED_BASE;
 	capDNDRedLight.device = PCA1;
 	
 	// Set Cap ATTD White
 	capATTDWhiteLight.state = OFF;
 	capATTDWhiteLight.pwmRaw = CAP_LIGHT_DEFAULT;
-	capATTDWhiteLight.address = CH0_BASE;
+	capATTDWhiteLight.address = CAP_ATTD_WHITE_BASE;
 	capATTDWhiteLight.device = PCA1;
 
 	// Set Cap ATTD Blue
 	capATTDBlueLight.state = OFF;
 	capATTDBlueLight.pwmRaw = 0;
-	capATTDBlueLight.address = CH1_BASE;
+	capATTDBlueLight.address = CAP_ATTD_BLUE_BASE;
 	capATTDBlueLight.device = PCA1;
 			
 	// Set Backshell Light
@@ -174,7 +202,7 @@ void set_initial_conditions(void)
 	backshellLight.pwmRaw_R = RGB_R_DEFAULT;
 	backshellLight.pwmRaw_G = RGB_G_DEFAULT;
 	backshellLight.pwmRaw_B = RGB_B_DEFAULT;
-	backshellLight.address = CH10_BASE;
+	backshellLight.address = CH13_BASE;
 	backshellLight.device = PCA1;
 
 	// Set Footwell Light
@@ -198,7 +226,7 @@ void set_initial_conditions(void)
 	stowageLight.pwmRaw_R = RGB_R_DEFAULT;
 	stowageLight.pwmRaw_G = RGB_G_DEFAULT;
 	stowageLight.pwmRaw_B = RGB_B_DEFAULT;
-	stowageLight.address = CH13_BASE;
+	stowageLight.address = CH10_BASE;
 	stowageLight.device = PCA1;	
 		
 	return;
@@ -217,9 +245,6 @@ void write_lighting_feature(struct ledFeature feature)
 	uint8_t msg[] = {feature.address,
 		ledx_on_l, ledx_on_h, ledx_off_l, ledx_off_h
 	};
-	
-	// Debug line
-	//printf("%d %d %d %d\n", ledx_on_l, ledx_on_h, ledx_off_l, ledx_off_h);
 	
 	// set i2c address based on feature.device
 	bcm2835_i2c_setSlaveAddress(feature.device);
@@ -258,26 +283,43 @@ void write_RGBlighting_feature(struct ledRGBFeature feature)
 }
 
 
-
-void i2c_end(void)
+void svc_readingLight(void)
 {
-	bcm2835_i2c_end(); 
-	return;
+	// Detect state change
+	if (readingLight.next_state != readingLight.prev_state)
+	{
+		// If next_state is ON
+		if (readingLight.next_state)
+		{
+			printf("RL ON \n");
+			if (readingLight.mode == RL1)
+			{
+				readingLight1.pwmRaw = readingLight.intensity;
+				readingLight2.pwmRaw = 0;
+			}
+			else
+			{
+				readingLight1.pwmRaw = 0;
+				readingLight2.pwmRaw = readingLight.intensity;
+			}
+		}
+		// If nex_state is OFF
+		else
+		{
+			printf("RL OFF \n");
+			readingLight1.pwmRaw = 0;
+			readingLight2.pwmRaw = 0;
+		}
+		
+		// Update state transition
+		readingLight.prev_state = readingLight.next_state;
+		
+		write_lighting_feature(readingLight1);
+		write_lighting_feature(readingLight2);
+		
+	}
 }
 
-
-void close_bcm(void)
-{
-	bcm2835_close();
-	return;
-}
-
-
-void delay_ms(unsigned int ms)
-{
-	bcm2835_delay(ms);
-	return;
-}
 
 
 uint64_t test_timer(void)
@@ -289,32 +331,43 @@ uint64_t test_timer(void)
 /* --------- SWITCH ACTIONS --------- */
 void svc_NEU_usw(void)
 {
-	//if (bcm2835_gpio_eds(NEU_USW))
-	if (bcm2835_gpio_lev(NEU_USW) & readingLight.state == RL1)
+	// Capture uSW state
+	neu_usw.next_state = bcm2835_gpio_lev(NEU_USW);
+	
+	// Update lighting only on state change
+	if (neu_usw.next_state != neu_usw.prev_state)
 	{
-		//if (readingLight.state == RL1)
-		//{
-			readingLight.state = RL2;
+		// Change to use .state - don't pull lev twice...
+		if (bcm2835_gpio_lev(NEU_USW) & readingLight.mode == RL1)
+		{
+			printf("NEU\n");
+			// Adjust state values even when RL is OFF
+			readingLight.mode = RL2;
 			readingLight1.pwmRaw = 0;
-			readingLight2.pwmRaw = RL_DEFAULT_MAX;
-			write_lighting_feature(readingLight1);
-			write_lighting_feature(readingLight2);
-	}
-	else if (!bcm2835_gpio_lev(NEU_USW) & readingLight.state == RL2)
-	{
-			readingLight.state = RL1;
-			readingLight1.pwmRaw = RL_DEFAULT_MAX;
+			readingLight2.pwmRaw = readingLight.intensity;
+		}
+		// Change to use .state - don't pull lev twice...
+		else if (!bcm2835_gpio_lev(NEU_USW) & readingLight.mode == RL2)
+		{
+			printf("/NEU\n");
+			readingLight.mode = RL1;
+			readingLight1.pwmRaw = readingLight.intensity;
 			readingLight2.pwmRaw = 0;
+		}
+
+		// REPLACE WITH FADE ROUTINE ******************
+		// Write only if RL is turned ON
+		if (readingLight.next_state == ON)
+		{
 			write_lighting_feature(readingLight1);
 			write_lighting_feature(readingLight2);
-	}
-			
-		// dim lighting
-		// toggle reading lights
+		}
+		// ********************************************
 		
-		// Clear EDS register
-		bcm2835_gpio_set_eds(NEU_USW);
-	//}
+		// Update prev_state
+		neu_usw.prev_state = neu_usw.next_state;
+	}
+
 	
 	return;
 }
@@ -322,12 +375,18 @@ void svc_NEU_usw(void)
 
 void svc_LAY_usw(void)
 {
-	if (bcm2835_gpio_eds(LAY_USW))
+	// CHANGE TO LEV ***************
+	if (bcm2835_gpio_lev(LAY_USW))
 	{
 		printf("LAY uSW \n");
+		
 		// dim lighting
 		// unmute audio
-		bcm2835_gpio_set_eds(LAY_USW);
+		bcm2835_gpio_write(MUTE, LOW);
+	}
+	else
+	{
+		bcm2835_gpio_write(MUTE, HIGH);
 	}
 	
 	return;
@@ -335,23 +394,13 @@ void svc_LAY_usw(void)
 
 
 /* --------- BTN ACTIONS --------- */
-uint8_t poll_ATTD_btn(void)
-{
-	return bcm2835_gpio_lev(SW1);
-}
-
-
-uint8_t poll_DND_btn(void)
-{
-	return bcm2835_gpio_lev(SW2);
-}
 
 void svc_ATTD_btn(void)
 {
-	if (!bcm2835_gpio_lev(SW1)) {
+	if (!bcm2835_gpio_lev(CAP_ATTD)) {
 		printf("State: %d\n", capATTDWhiteLight.state);
 		if (capATTDWhiteLight.state == WHITE) {
-			capATTDWhiteLight.pwmRaw = 0;
+			capATTDWhiteLight.pwmRaw = CAP_LIGHT_OFF;
 			capATTDBlueLight.pwmRaw = CAP_LIGHT_DEFAULT;
 			write_lighting_feature(capATTDWhiteLight);
 			write_lighting_feature(capATTDBlueLight);
@@ -360,7 +409,7 @@ void svc_ATTD_btn(void)
 		}
 		else {
 			capATTDWhiteLight.pwmRaw = CAP_LIGHT_DEFAULT;
-			capATTDBlueLight.pwmRaw = 0;
+			capATTDBlueLight.pwmRaw = CAP_LIGHT_OFF;
 			write_lighting_feature(capATTDWhiteLight);
 			write_lighting_feature(capATTDBlueLight);
 			
@@ -375,11 +424,17 @@ void svc_ATTD_btn(void)
 }
 
 void svc_DND_btn(void)
-{
-	if (!bcm2835_gpio_lev(SW2)) {
+{/*
+	if (!bcm2835_gpio_lev(CAP_RL)) 
+	{
+		// Detect rising edge of button
+		if (bcm2835_gpio_eds(CAP_RL))
+		{*/
+			
+	if (!bcm2835_gpio_lev(CAP_DND)) {
 		printf("State: %d\n", capDNDWhiteLight.state);
 		if (capDNDWhiteLight.state == WHITE) {
-			capDNDWhiteLight.pwmRaw = 0;
+			capDNDWhiteLight.pwmRaw = CAP_LIGHT_OFF;
 			capDNDRedLight.pwmRaw = CAP_LIGHT_DEFAULT;
 			write_lighting_feature(capDNDWhiteLight);
 			write_lighting_feature(capDNDRedLight);
@@ -388,7 +443,7 @@ void svc_DND_btn(void)
 		}
 		else {
 			capDNDWhiteLight.pwmRaw = CAP_LIGHT_DEFAULT;
-			capDNDRedLight.pwmRaw = 0;
+			capDNDRedLight.pwmRaw = CAP_LIGHT_OFF;
 			write_lighting_feature(capDNDWhiteLight);
 			write_lighting_feature(capDNDRedLight);
 			
@@ -401,16 +456,31 @@ void svc_DND_btn(void)
 	return;
 }
 
-
+// Duplicate for Cap button at RL...
 void svc_RL_btn(void)
 {
-	if (!bcm2835_gpio_lev(SW3)) {
-		capRLLight.pwmRaw = 1000;
+	if (!bcm2835_gpio_lev(CAP_RL)) 
+	{
+		// Feedback illumination at button
+		capRLLight.pwmRaw = readingLight.intensity;
 		write_lighting_feature(capRLLight);
 		
-		// Add toggle for reading lights...
+		// Detect rising edge of button
+		if (bcm2835_gpio_eds(CAP_RL))
+		{
+			if (readingLight.prev_state)
+				readingLight.next_state = 0;
+			else
+				readingLight.next_state = 1;
+			
+			printf("CAP_RL EDS: %d\n", bcm2835_gpio_eds(CAP_RL));
+			// Clear EDS flag
+			bcm2835_gpio_set_eds(CAP_RL);
+			printf("CAP_RL EDS: %d\n", bcm2835_gpio_eds(CAP_RL));
+		}			
 	}
 	else {
+		// Feedback illumination at button
 		capRLLight.pwmRaw = CAP_LIGHT_DEFAULT;
 		write_lighting_feature(capRLLight);
 	}
@@ -420,8 +490,8 @@ void svc_RL_btn(void)
 
 void svc_LAY_btn(void)
 {
-	if (!bcm2835_gpio_lev(SW4)) {
-		capLAYLight.pwmRaw = 1000;
+	if (!bcm2835_gpio_lev(CAP_LF)) {
+		capLAYLight.pwmRaw = CAP_LIGHT_HIGH;
 		write_lighting_feature(capLAYLight);
 		bcm2835_gpio_write(LAY_SW, HIGH);
 	}
@@ -435,8 +505,8 @@ void svc_LAY_btn(void)
 
 void svc_TTL_btn(void)
 {
-	if (!bcm2835_gpio_lev(SW5)) {
-		capTTLLight.pwmRaw = 1000;
+	if (!bcm2835_gpio_lev(CAP_TTL)) {
+		capTTLLight.pwmRaw = CAP_LIGHT_HIGH;
 		write_lighting_feature(capTTLLight);
 		bcm2835_gpio_write(TTL_SW, HIGH);
 	}
@@ -445,6 +515,38 @@ void svc_TTL_btn(void)
 		write_lighting_feature(capTTLLight);
 		bcm2835_gpio_write(TTL_SW, LOW);
 	}
+	return;
+}
+
+// Cap touch at RL
+// EDS didn't work on Pin 40, so had to make own edge detect
+void svc_RL_btn2(void)
+{
+
+	// Capture uSW state
+	cap_rl_btn.next_state = bcm2835_gpio_lev(CAP_RL_BTN);
+	
+	// Rising Edge
+	if ((cap_rl_btn.next_state == 1) & (cap_rl_btn.prev_state == 0))
+	{
+		printf("CAP_RL_BTN Next: %d\n", cap_rl_btn.next_state);
+
+		if (readingLight.prev_state)
+			readingLight.next_state = 0;
+		else
+			readingLight.next_state = 1;
+		
+		printf("CAP_RL_BTN EDS: %d\n", bcm2835_gpio_eds(CAP_RL_BTN));
+	
+		cap_rl_btn.prev_state = cap_rl_btn.next_state;
+	}	
+	
+	// Falling Edge
+	if ((cap_rl_btn.next_state == 0) & (cap_rl_btn.prev_state == 1))
+	{
+		cap_rl_btn.prev_state = cap_rl_btn.next_state;
+	}	
+	
 	return;
 }
 
@@ -485,5 +587,29 @@ void mute_audio(void)
 void unmute_audio(void)
 {
 	bcm2835_gpio_write(MUTE, LOW);
+	return;
+}
+
+/* --------------------------------- */
+
+/* ------------- MISC -------------- */
+
+void i2c_end(void)
+{
+	bcm2835_i2c_end(); 
+	return;
+}
+
+
+void close_bcm(void)
+{
+	bcm2835_close();
+	return;
+}
+
+
+void delay_ms(unsigned int ms)
+{
+	bcm2835_delay(ms);
 	return;
 }

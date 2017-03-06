@@ -1,4 +1,9 @@
 
+/* ====================== CAP UI VERSION ============================ */
+#define CAP_VER_1
+
+/* ==================== WASH COLOR DEFAULT ========================== */
+#define CUSTOM_WASH
 
 /* ------------------------ OUTPUTS --------------------------------- */
 #define ST_LED RPI_V2_GPIO_P1_32	// Status LED
@@ -8,14 +13,29 @@
 #define MUTE RPI_V2_GPIO_P1_07		// Amplifier Mute
 
 /* ------------------------ INPUTS ---------------------------------- */
-#define SW1 RPI_V2_GPIO_P1_29
-#define SW2 RPI_V2_GPIO_P1_31
-#define SW3 RPI_V2_GPIO_P1_33
-#define SW4 RPI_V2_GPIO_P1_35
-#define SW5 RPI_V2_GPIO_P1_37
+
+// CAP Version 1
+#ifdef CAP_VER_1
+#define CAP_ATTD RPI_V2_GPIO_P1_29		// ATTD
+#define CAP_DND RPI_V2_GPIO_P1_31		// DND
+#define CAP_RL RPI_V2_GPIO_P1_33		// RL
+#define CAP_LF RPI_V2_GPIO_P1_35		// LF
+#define CAP_TTL RPI_V2_GPIO_P1_37		// TTL
+#endif
+
+// CAP Version 2
+#ifdef CAP_VER_2
+#define CAP_ATTD RPI_V2_GPIO_P1_37	// ATTD
+#define CAP_DND RPI_V2_GPIO_P1_35	// DND
+#define CAP_RL RPI_V2_GPIO_P1_33	// RL
+#define CAP_LF RPI_V2_GPIO_P1_31	// LF
+#define CAP_TTL RPI_V2_GPIO_P1_29	// TTL
+#endif
 
 #define NEU_USW RPI_V2_GPIO_P1_18
 #define LAY_USW RPI_V2_GPIO_P1_16
+
+#define CAP_RL_BTN RPI_V2_GPIO_P1_40 // Cap switch at RL
 
 /* ----------------------- LIGHTING CONSTANTS ----------------------- */
 #define MODE_READ 0
@@ -24,11 +44,31 @@
 
 #define DIMMING_RATE	5	// Higher is slower...
 
-#define RGB_R_DEFAULT	10
+#ifdef RED_WASH
+#define RGB_R_DEFAULT	1000
 #define RGB_G_DEFAULT	0
 #define RGB_B_DEFAULT	0
+#elif defined GREEN_WASH
+#define RGB_R_DEFAULT	0
+#define RGB_G_DEFAULT	1000
+#define RGB_B_DEFAULT	0
+#elif defined BLUE_WASH
+#define RGB_R_DEFAULT	0
+#define RGB_G_DEFAULT	0
+#define RGB_B_DEFAULT	1000
+#elif defined WHITE_WASH
+#define RGB_R_DEFAULT	500
+#define RGB_G_DEFAULT	500
+#define RGB_B_DEFAULT	500
+#elif defined CUSTOM_WASH
+#define RGB_R_DEFAULT	255
+#define RGB_G_DEFAULT	197
+#define RGB_B_DEFAULT	60
+#endif
 
-#define CAP_LIGHT_DEFAULT	200
+#define CAP_LIGHT_DEFAULT	1000
+#define CAP_LIGHT_HIGH		3500
+#define CAP_LIGHT_OFF		0
 #define RL_DEFAULT_MAX		2000
 
 #define OFF 	0
@@ -68,6 +108,28 @@
 #define CH13_BASE 0x3A
 #define CH14_BASE 0x3E
 #define CH15_BASE 0x42
+
+// CAP Version 1
+#ifdef CAP_VER_1
+#define CAP_TTL_BASE	CH6_BASE
+#define CAP_LAY_BASE	CH5_BASE
+#define CAP_RL_BASE		CH4_BASE
+#define CAP_DND_RED_BASE	CH3_BASE
+#define CAP_DND_WHITE_BASE	CH2_BASE
+#define CAP_ATTD_BLUE_BASE	CH1_BASE
+#define CAP_ATTD_WHITE_BASE	CH0_BASE
+#endif
+
+// CAP Version 2
+#ifdef CAP_VER_2
+#define CAP_TTL_BASE	CH0_BASE
+#define CAP_LAY_BASE	CH1_BASE
+#define CAP_RL_BASE		CH2_BASE
+#define CAP_DND_RED_BASE	CH3_BASE
+#define CAP_DND_WHITE_BASE	CH4_BASE
+#define CAP_ATTD_BLUE_BASE	CH5_BASE
+#define CAP_ATTD_WHITE_BASE	CH6_BASE
+#endif
 
 #define PCA1 0x42
 #define PCA2 0x41

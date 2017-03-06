@@ -25,7 +25,8 @@ int main(int argc, char **argv)
 	set_initial_conditions();
 	
 	// Write to all lighting features ...
-	//write_RGBlighting_feature(backshellLight);
+	
+	write_RGBlighting_feature(backshellLight);
 	//write_RGBlighting_feature(stowageLight);
 	
 	write_lighting_feature(capTTLLight);
@@ -39,22 +40,14 @@ int main(int argc, char **argv)
 	write_lighting_feature(capATTDWhiteLight);
 	delay_ms(500);
 	
-	write_lighting_feature(readingLight1);
-	
+
 	
 	/*------------------- Main Routine --------------------*/
 	
 	
 	uint8_t i;
+	uint64_t data;
 	
-	/*
-	for (i=0; i<100; i++){
-		backshellLight.pwmRaw_B = i;
-		backshellLight.pwmRaw_G = 100-i;
-		write_RGBlighting_feature(backshellLight);
-		delay_ms(30);
-	}*/
-				
 	while (1)
 	{
 		
@@ -66,37 +59,20 @@ int main(int argc, char **argv)
 		
 		svc_NEU_usw();
 		svc_LAY_usw();
-		//delay_ms(400);
 		
+		svc_RL_btn2();
 		
+		svc_readingLight();
 		
-		/*
-		for (i=0; i<100; i++){
-			backshellLight.pwmRaw_B = i;
-			backshellLight.pwmRaw_G = 100-i;
-			write_RGBlighting_feature(backshellLight);
-			//readingLight2.pwmRaw = i;
-			//write_lighting_feature(readingLight2);
-			delay_ms(30);//DIMMING_RATE);			
-			//svc_DND_btn();
-		}
-		for (i=0; i<100; i++){
-			backshellLight.pwmRaw_B = 100-i;
-			backshellLight.pwmRaw_G = i;
-			write_RGBlighting_feature(backshellLight);
-			//readingLight2.pwmRaw = 100-i;
-			//write_lighting_feature(readingLight2);
-			delay_ms(30);//DIMMING_RATE);			
-			//svc_DND_btn();
-		}
-		*/
 		/*
 		data = test_timer();
 		printf ("Timer 1: %" PRIu64 "\n", data);
-		delay_ms(500);
-		data = test_timer();
-		printf ("Timer 2: %" PRIu64 "\n", data);
 		*/
+		
+		// Test Loop Delay
+		//delay_ms(500);
+		
+		// Standard Loop Delay
 		delay_ms(10);
 		
 	}
